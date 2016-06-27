@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * Created by Administrator on 2016/6/26 0026.
  */
-public class CoolWeatheDB {
+public class CoolWeatherDB {
 
     /**
      * 数据库名
@@ -24,14 +24,14 @@ public class CoolWeatheDB {
      */
     public static final int VERSION = 1;
 
-    private static CoolWeatheDB coolWeatheDB;
+    private static CoolWeatherDB coolWeatherDB;
 
     private SQLiteDatabase db;
 
     /**
      * 将构造方法私有化
      */
-    private CoolWeatheDB(Context context){
+    private CoolWeatherDB(Context context){
         CoolWeatherOpenHelper dbHelper = new CoolWeatherOpenHelper(context,DB_NAME,null,VERSION);
         db = dbHelper.getWritableDatabase();
     }
@@ -39,11 +39,11 @@ public class CoolWeatheDB {
     /**
      * 获取CoolWeatherDB的实例
      */
-    public synchronized static CoolWeatheDB getInstance(Context context){
-        if (coolWeatheDB == null){
-            coolWeatheDB = new CoolWeatheDB(context);
+    public synchronized static CoolWeatherDB getInstance(Context context){
+        if (coolWeatherDB == null){
+            coolWeatherDB = new CoolWeatherDB(context);
         }
-        return coolWeatheDB;
+        return coolWeatherDB;
     }
 
     /**
