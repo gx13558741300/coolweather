@@ -3,7 +3,6 @@ package com.example.administrator.coolweather.util;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.icu.text.SimpleDateFormat;
 import android.preference.PreferenceManager;
 import android.text.TextUtils;
 
@@ -14,6 +13,7 @@ import com.example.administrator.coolweather.model.Province;
 
 import org.json.JSONObject;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class Utility {
@@ -107,7 +107,7 @@ public class Utility {
 
     public static void saveWeatherInfo(Context context, String cityName, String weatherCode, String temp1,
                                        String temp2, String weatherDesp,String publishTime){
-//        SimpleDateFormat sdf = new SimpleDateFormat("yyyy年M月d日");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy年M月d日");
         SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(context).edit();
         editor.putBoolean("city_selected",true);
         editor.putString("weather_code",weatherCode);
@@ -116,7 +116,8 @@ public class Utility {
         editor.putString("temp2",temp2);
         editor.putString("weather_desp",weatherDesp);
         editor.putString("publish_time",publishTime);
-//        editor.putString("current_date",sdf.format(new Date()));
+
+        editor.putString("current_date",sdf.format(new Date()));
         editor.commit();
     }
 
