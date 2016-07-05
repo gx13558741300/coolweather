@@ -11,6 +11,7 @@ import com.example.administrator.coolweather.model.CoolWeatherDB;
 import com.example.administrator.coolweather.model.County;
 import com.example.administrator.coolweather.model.Province;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
@@ -102,6 +103,44 @@ public class Utility {
     }
 
     /**
+     * 解析易用天气服务器返回的实时天气JSON数据，并将解析出的数据存储到本地
+     */
+    public static void handleNewWeatherResponse(Context context,String response){
+        try {
+            JSONObject jsonObject = new JSONObject(response);
+            String counts = jsonObject.getString("counts");
+            JSONObject weatherInfo = jsonObject.getJSONObject("data");
+            String cityName = weatherInfo.getString("cityName");
+            String lastUpdateTime = weatherInfo.getString("lastUpdate");
+            String weatherDesp = weatherInfo.getString("tq");
+            String temp = weatherInfo.getString("qw");
+            String cityId = weatherInfo.getString("cityId");
+            saveNewWeatherInfo(context,cityName,cityId,temp,lastUpdateTime,weatherDesp,counts);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 将易用服务器返回的所有天气信息存储到SharedPreferences文件中
+     */
+    public static void saveNewWeatherInfo(Context context, String cityName, String cityId, String temp,
+                                          String lastUpdateTime, String weatherDesp, String counts){
+        SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(context).edit();
+        editor.putBoolean("city_selected",true);
+        editor.putString("cityName",cityName);
+        editor.putString("cityId",cityId);
+        editor.putString("temp",temp);
+        editor.putString("lastUpdateTime",lastUpdateTime);
+        editor.putString("weatherDesp",weatherDesp);
+        editor.putString("counts",counts);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy年M月d日");
+        editor.putString("current_date",sdf.format(new Date()));
+        editor.commit();
+
+    }
+
+    /**
      * 将服务器返回的所有天气信息存储到SharedPreferences文件中
      */
 
@@ -119,6 +158,53 @@ public class Utility {
 
         editor.putString("current_date",sdf.format(new Date()));
         editor.commit();
+    }
+    /**
+     * 解析服务器返回的JSON格式的城市信息并将其分别存放在数据库的三张表中
+     */
+    public static void handleCityInfo(CoolWeatherDB coolWeatherDB, String response){
+       try {
+           JSONObject china = new JSONObject(response);
+           JSONArray provinceList = china.getJSONArray("list");
+           int provinceId = 1;
+           int cityId = 1;
+           for (int i = 0; i < provinceList.length(); i++){
+               JSONObject provinceJSON = provinceList.getJSONObject(i);
+
+               Province province = new Province();
+               province.setProvinceName(provinceJSON.getString("name"));
+               province.setProvinceCode(provinceJSON.getString("city_id"));
+               coolWeatherDB.saveProvince(province);
+
+               JSONArray cityList = provinceJSON.getJSONArray("list");
+               for (int j = 0; j < cityList.length(); j++){
+                   JSONObject cityJSON = cityList.getJSONObject(j);
+                   City city = new City();
+                   city.setCityName(cityJSON.getString("name"));
+                   city.setCityCode(cityJSON.getString("city_id"));
+                   city.setProvinceId(provinceId);
+                   coolWeatherDB.saveCity(city);
+                   JSONArray countyList;
+                   if (!cityJSON.isNull("list")) {
+                       countyList = cityJSON.getJSONArray("list");
+                       for (int x = 0; x < countyList.length(); x++){
+                           JSONObject countyJSON = countyList.getJSONObject(x);
+                           County county = new County();
+                           county.setCountyName(countyJSON.getString("name"));
+                           county.setCountyCode(countyJSON.getString("city_id"));
+                           county.setCityId(cityId);
+                           coolWeatherDB.saveCountry(county);
+                       }
+                   }
+                   cityId++;
+               }
+               provinceId++;
+
+           }
+
+       }catch (Exception e) {
+           e.printStackTrace();
+       }
     }
 
 }

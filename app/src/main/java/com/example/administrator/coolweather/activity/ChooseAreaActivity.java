@@ -124,7 +124,8 @@ public class ChooseAreaActivity extends AppCompatActivity {
             titleText.setText("中国");
             currentLevel = LEVEL_PROVINCE;
         }else {
-            queryFromServer(null,"province");
+            queryFromNewServer();
+           // queryFromServer(null,"province");
         }
     }
 
@@ -143,7 +144,7 @@ public class ChooseAreaActivity extends AppCompatActivity {
             titleText.setText(selectedProvince.getProvinceName());
             currentLevel = LEVEL_CITY;
         }else {
-            queryFromServer(selectedProvince.getProvinceCode(),"city");
+          //  queryFromServer(selectedProvince.getProvinceCode(),"city");
         }
     }
 
@@ -162,7 +163,13 @@ public class ChooseAreaActivity extends AppCompatActivity {
             titleText.setText(selectedCity.getCityName());
             currentLevel = LEVEL_COUNTY;
         }else {
-            queryFromServer(selectedCity.getCityCode(),"county");
+            String cityCode = selectedCity.getCityCode();
+            Intent intent = new Intent(ChooseAreaActivity.this,WeatherActivity.class);
+            intent.putExtra("county_code",cityCode);
+            startActivity(intent);
+            finish();
+
+          //  queryFromServer(selectedCity.getCityCode(),"county");
         }
     }
 
@@ -221,7 +228,39 @@ public class ChooseAreaActivity extends AppCompatActivity {
 
 
     }
+    /**
+     * 从易用天气服务器上读取城市数据，并将其存储在数据库中
+     */
+    private void queryFromNewServer() {
+        String address;
+        address = "http://api.yytianqi.com/citylist/id/1";
+        showProgressDialog();
+        HttpUtil.sendHttpRequest(address, new HttpCallbackListener() {
+            @Override
+            public void onFinish(String response) {
+                Utility.handleCityInfo(coolWeatherDB,response);
+                // 通过runOnUiThread方法回到主线程处理逻辑
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        closeProgressDialog();
+                        queryProvince();
+                    }
+                });
+            }
 
+            @Override
+            public void onError(Exception e) {
+                //通过runOnUiThread方法回到主线程处理逻辑
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        closeProgressDialog();
+                        Toast.makeText(ChooseAreaActivity.this, "加载失败", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+        });
+    }
     /**
      * 显示进度对话框
      */

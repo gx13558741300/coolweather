@@ -1,8 +1,11 @@
 package com.example.administrator.coolweather.activity;
 
+import android.content.ComponentName;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
@@ -10,9 +13,11 @@ import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.Switch;
 import android.widget.TextView;
 
 import com.example.administrator.coolweather.R;
+import com.example.administrator.coolweather.service.AutoUpdateService;
 import com.example.administrator.coolweather.util.HttpCallbackListener;
 import com.example.administrator.coolweather.util.HttpUtil;
 import com.example.administrator.coolweather.util.Utility;
@@ -36,7 +41,7 @@ public class WeatherActivity extends AppCompatActivity implements View.OnClickLi
     /**
      * 用于显示气温1
      */
-    private TextView temp1Text;
+    private TextView tempText;
     /**
      * 用于显示气温2
      */
@@ -53,7 +58,16 @@ public class WeatherActivity extends AppCompatActivity implements View.OnClickLi
      * 更新天气按钮
      */
     private Button refreshWeather;
+    /**
+     * 用于显示每小时剩余访问数
+     */
+    private TextView countsText;
+    /**
+     * 用于切换是否开启后台自动更新天气服务
+     */
+    private Switch aSwitch;
 
+    private boolean isUpdate;
 
 
 
@@ -63,22 +77,25 @@ public class WeatherActivity extends AppCompatActivity implements View.OnClickLi
         getSupportActionBar().hide();
         setContentView(R.layout.weather_layout);
 
+
         //初始化各控件
         weatherInfoLayout = (LinearLayout) findViewById(R.id.weather_info_layout);
         cityNameText = (TextView) findViewById(R.id.city_name);
         publishText = (TextView) findViewById(R.id.publish_text);
         weatherDespText = (TextView) findViewById(R.id.weather_desp);
-        temp1Text = (TextView) findViewById(R.id.temp1);
-        temp2Text = (TextView) findViewById(R.id.temp2);
+        tempText = (TextView) findViewById(R.id.temp);
         currentDateText = (TextView) findViewById(R.id.current_date);
-        String countyCode = getIntent().getStringExtra("county_code");
+        countsText = (TextView) findViewById(R.id.counts);
+        aSwitch = (Switch) findViewById(R.id.switch1);
 
+        getSetting();
+        String countyCode = getIntent().getStringExtra("county_code");
         if (!TextUtils.isEmpty(countyCode)){
             //有县级代号时就去查询天气
             publishText.setText("同步中...");
             weatherInfoLayout.setVisibility(View.INVISIBLE);
             cityNameText.setVisibility(View.INVISIBLE);
-            queryWeatherCode(countyCode);
+            queryWeather(countyCode);
         }else {
             //没有县级代号时就直接显示本地天气
             showWeather();
@@ -87,8 +104,19 @@ public class WeatherActivity extends AppCompatActivity implements View.OnClickLi
         refreshWeather = (Button) findViewById(R.id.refresh_weather);
         swichCity.setOnClickListener(this);
         refreshWeather.setOnClickListener(this);
+        aSwitch.setChecked(isUpdate);
+        aSwitch.setOnClickListener(this);
+        if (isUpdate){
+            aSwitch.setText("自动更新天气");
+        }else {
+            aSwitch.setText("不自动更新天气");
+        }
     }
 
+    private void getSetting(){
+        SharedPreferences prefs = getSharedPreferences("setting",MODE_PRIVATE);
+        isUpdate = prefs.getBoolean("isUpdate",false);
+    }
     /**
      * 查询省级代号对应的天气代号
      */
@@ -105,6 +133,7 @@ public class WeatherActivity extends AppCompatActivity implements View.OnClickLi
         String address = "http://www.weather.com.cn/data/cityinfo/" + weatherCode + ".html";
         queryFromServer(address,"weatherCode");
     }
+
 
     /**
      * 根据传入的地址和类型去向服务器查询天气代号或者天气信息
@@ -147,19 +176,48 @@ public class WeatherActivity extends AppCompatActivity implements View.OnClickLi
     }
 
     /**
+     * 从服务器查询天气信息
+     */
+    private void queryWeather(String countyCode){
+        String address = "http://api.yytianqi.com/observe?city="+ countyCode +"&key=3oie29468wabgdo8";
+        HttpUtil.sendHttpRequest(address, new HttpCallbackListener() {
+            @Override
+            public void onFinish(String response) {
+                Utility.handleNewWeatherResponse(WeatherActivity.this,response);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        showWeather();
+                    }
+                });
+            }
+            @Override
+            public void onError(Exception e) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        publishText.setText("同步失败");
+                    }
+                });
+            }
+        });
+    }
+
+    /**
      * 从SharedPreferences文件中读取存储的天气信息，并显示到界面上。
      */
     private void showWeather(){
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        cityNameText.setText(prefs.getString("city_name",""));
-        temp1Text.setText(prefs.getString("temp1",""));
-        temp2Text.setText(prefs.getString("temp2",""));
-        weatherDespText.setText(prefs.getString("weather_desp",""));
-        publishText.setText("今天" + prefs.getString("publish_time","") +"发布");
-        String date = prefs.getString("current_date","");
+        cityNameText.setText(prefs.getString("cityName",""));
+        tempText.setText(prefs.getString("temp",""));
+        weatherDespText.setText(prefs.getString("weatherDesp",""));
+        publishText.setText("今天" + prefs.getString("lastUpdateTime","") +"发布");
         currentDateText.setText(prefs.getString("current_date",""));
+        countsText.setText(prefs.getString("counts",""));
         weatherInfoLayout.setVisibility(View.VISIBLE);
         cityNameText.setVisibility(View.VISIBLE);
+        Intent intent = new Intent(this, AutoUpdateService.class);
+        startService(intent);
     }
 
 
@@ -175,9 +233,23 @@ public class WeatherActivity extends AppCompatActivity implements View.OnClickLi
             case R.id.refresh_weather:
                 publishText.setText("同步中");
                 SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-                String weatherCode = prefs.getString("weather_code","");
+                String weatherCode = prefs.getString("cityId","");
                 if (!TextUtils.isEmpty(weatherCode)){
-                    queryWeatherInfo(weatherCode);
+                    queryWeather(weatherCode);
+                }
+                break;
+            case R.id.switch1:
+                isUpdate = !isUpdate;
+                aSwitch.setChecked(isUpdate);
+                SharedPreferences.Editor editor = getSharedPreferences("setting",MODE_PRIVATE).edit();
+                editor.putBoolean("isUpdate",isUpdate);
+                editor.apply();
+                if (isUpdate){
+                    aSwitch.setText("自动更新天气");
+                    Intent intentService = new Intent(this, AutoUpdateService.class);
+                    startService(intentService);
+                }else {
+                    aSwitch.setText("不自动更新天气");
                 }
                 break;
             default:

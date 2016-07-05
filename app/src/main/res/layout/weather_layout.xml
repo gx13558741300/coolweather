@@ -55,7 +55,14 @@
             android:textColor="#FFF"
             android:textSize="18sp"
             android:text="publish_text"/>
-
+        <TextView
+            android:id="@+id/counts"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="counts"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="22dp" />
         <LinearLayout
             android:id="@+id/weather_info_layout"
             android:layout_width="wrap_content"
@@ -89,33 +96,23 @@
                 android:orientation="horizontal">
 
                 <TextView
-                    android:id="@+id/temp1"
+                    android:id="@+id/temp"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
                     android:textColor="#FFF"
                     android:textSize="40sp"
-                    android:text="temp1"/>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_vertical"
-                    android:layout_marginLeft="10dp"
-                    android:layout_marginRight="10dp"
-                    android:text="-"
-                    android:textColor="#FFF"
-                    android:textSize="40sp"/>
-                <TextView
-                    android:id="@+id/temp2"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_vertical"
-                    android:textColor="#FFF"
-                    android:textSize="40sp"
-                    android:text="temp2"/>
+                    android:text="temp"/>
             </LinearLayout>
         </LinearLayout>
+
+        <Switch
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="New Switch"
+            android:id="@+id/switch1"
+            android:layout_below="@+id/weather_info_layout"
+            android:layout_centerHorizontal="true" />
     </RelativeLayout>
 
 
